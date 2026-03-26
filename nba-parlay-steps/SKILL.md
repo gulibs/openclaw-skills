@@ -1,9 +1,10 @@
 ---
 name: nba-parlay-steps
 description: >-
-  Pull nba_analysis git repo and run OpenClaw step files 00-06 for Beijing game-day parlay analysis;
-  write structured JSON under output/. Use when user provides run_id, data_bundle_date, beijing_game_date.
-compatibility: Requires git on the Gateway host PATH and a git clone at NBA_ANALYSIS_ROOT (or ~/nba_analysis).
+  NBA 竞彩串关分步分析（OpenClaw）：在 nba_analysis 仓库按 manifest 执行 00_README→06，读数据包、写 output/parlay_recommendation.json 与 meta.json。
+  需用户给出 run_id、data_bundle_date、beijing_game_date；Gateway 须已配置 git 与本仓库克隆。
+  触发场景：串关分析、体彩 OpenClaw、nba_analysis 步骤包、北京比赛日竞彩。
+allowed-tools: Read, Grep, Glob, Write, Bash
 metadata:
   openclaw:
     requires:
@@ -12,6 +13,16 @@ metadata:
 ---
 
 # NBA 串关分步分析（nba_analysis 数据包）
+
+基于分析服务落盘的 **`{data_bundle_date}/runs/{run_id}/`** 分步 Markdown 与 JSON，在本地 git 仓库中顺序执行步骤并产出结构化串关结果。
+
+## 触发条件
+
+当用户或任务涉及以下场景时，应加载本技能：
+
+- 已提供 **`run_id`** + **`data_bundle_date`**（数据包日）+ **`beijing_game_date`**（北京比赛日），并要在 **nba_analysis** 仓库里跑 OpenClaw 步骤
+- 提到 **串关**、**parlay_recommendation.json**、**manifest.json**、**04_game_**、**OpenClaw 串关**、**体彩分步分析**
+- 需要从 `output/` 写入 **git commit / push** 并供后端「同步产物」
 
 ## 何时使用
 
@@ -114,6 +125,9 @@ metadata:
 ---
 
 ## 若已放入 `~/.openclaw/skills/nba-parlay-steps/SKILL.md` 但客户端里仍不显示
+
+0. **目录名与 frontmatter `name` 一致**  
+   与示例技能相同：使用文件夹 **`nba-parlay-steps/`**（与 `name: nba-parlay-steps` 一致），其下放置本 **`SKILL.md`**，勿只拷贝单文件到错误路径。
 
 1. **技能由 Gateway 加载，不是本机 App 扫盘**  
    macOS App 通过 Gateway 的 **`skills.status`** 拉列表。`SKILL.md` 必须存在于 **运行 Gateway 进程的那台机器**上的 `~/.openclaw/skills/`（或该主机的 workspace `skills/`）。若 App 连接的是 **远程 / Docker 里的 Gateway**，在你笔记本家目录拷文件 **无效**，要把同一目录拷到 **Gateway 容器/服务器**对应用户主目录或配置的技能路径。
