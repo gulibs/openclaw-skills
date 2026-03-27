@@ -22,6 +22,46 @@ metadata:
 - **不是**：对模型做「逐条判卷」——**`level_hint` / `missing_fields`** 表示数据包内赔率覆盖情况，**不等于**「本场禁止分析」或「必须 Fail Fast」。缺某一玩法时，仍可在**有赔率的玩法**上写结论与串关腿，并在文中写明缺口。
 - **分析质量**与 **JSON 字段是否齐全**有关但不等价：格式契约（`matchup_zh`、`bet_type_hint` 等）是**可同步与可展示**；**推理是否正确**取决于是否紧扣数据包、是否捏造伤病、是否误用「模型预测」等——见 `01_rules.md` 与数据边界说明。
 
+## 一键 Gateway 与「真分步」
+
+| 模式 | 含义 | 管理端可观测性 |
+|------|------|------------------|
+| **一键** | 后端对 Gateway **单次** `POST /v1/responses`，一条 `build_agent_message`（技能 + 路径）；OpenClaw 客户端里通常表现为 **一段流式输出 / 一个会话块**。 | 依赖 `output/` 落盘 + 「同步产物」；对话 token **不会**逐条进 DB，除非写入文件。 |
+| **真分步** | 按 `manifest.steps` **多轮**对话：每轮单独 user 输入（或多次调用管理端 `gateway-stream` 并传入**不同**的 `message`）；见后端 `GET …/orchestration-plan`。 | 每轮一条请求，前端可多次触发，观感为多段任务。 |
+
+**一键模式下**为让管理端能展示「每场分析 / 每步说明」，必须在写 `meta.json` / `parlay_recommendation.json` 的同时（或之前）落盘 **`output/step_transcript.json`**（契约见下），否则同步入库后仍只有结构化串关 JSON，**没有**分步长文。
+
+### `output/step_transcript.json`（强烈建议；与同步入库对齐）
+
+与 `parlay_recommendation.json` 同级，供分析服务 **merge 进 `result_json`** 并在管理端展示。
+
+```json
+{
+  "schema_version": 1,
+  "run_id": "<uuid>",
+  "steps": [
+    {
+      "step_id": "01_rules",
+      "title_zh": "规则摘要",
+      "markdown_zh": "（本步要点，Markdown 可）"
+    }
+  ],
+  "games": [
+    {
+      "game_id": 7341,
+      "title_zh": "湖人 vs 老鹰",
+      "analysis_zh": "（单场完整分析正文，Markdown 可）"
+    }
+  ]
+}
+```
+
+- **`steps`**：对应 manifest 中非单场步（00–03、05–06）的摘要；`step_id` 建议与文件名一致（如 `04_game_7341` 也可只写在 `games`）。
+- **`games`**：`manifest.game_ids_scope` 内**每场一条**，`analysis_zh` 为步骤 04 级正文；便于与 scope 交叉校验。
+- 写入后随其他产物 **git commit / push**，再在管理端「同步 → DB」。
+
+---
+
 ## 触发条件
 
 当用户或任务涉及以下场景时，应加载本技能：
