@@ -56,7 +56,7 @@ metadata:
 }
 ```
 
-- **`steps`**：对应 manifest 中非单场步（00–03、05–06）的摘要；`step_id` 建议与文件名一致（如 `04d_game_7341_conclusion`；单场长文也可只写在 `games`）。
+- **`steps`**：对应 manifest 中非单场步（00–03、05–06）的摘要；`step_id` 建议与文件名一致（如 `04d_game_7341_conclusion` 或赛后 `04f_game_7341_review`；单场长文也可只写在 `games`）。
 - **`games`**：`manifest.game_ids_scope` 内**每场一条**，`analysis_zh` 为步骤 04 级正文；便于与 scope 交叉校验。
 - 写入后随其他产物 **git commit / push**，再在管理端「同步 → DB」。
 
@@ -67,7 +67,7 @@ metadata:
 当用户或任务涉及以下场景时，应加载本技能：
 
 - 已提供 **`run_id`** + **`data_bundle_date`**（数据包日）+ **`beijing_game_date`**（北京比赛日），并要在 **nba_analysis** 仓库里跑 OpenClaw 步骤
-- 提到 **串关**、**parlay_recommendation.json**、**manifest.json**、**04a/04d**、**OpenClaw 串关**、**体彩分步分析**
+- 提到 **串关**、**parlay_recommendation.json**、**manifest.json**、**04a/04d（赛前）或 04f（赛后）**、**OpenClaw 串关**、**体彩分步分析**
 - 需要从 `output/` 写入 **git commit / push** 并供后端「同步产物」
 
 ## 何时使用
@@ -92,8 +92,8 @@ metadata:
 2. **01** `01_rules.md` — 引擎规范（赛前/赛后、Fail Fast 仅何时适用、缺口与串关可行性）。
 3. **02** `02_schedule.md` — 赛程与 scope 对齐；**仅当**场次无法与逐场摘要对齐时再停止扩写。
 4. **03** `03_odds_index.md` — 盘口覆盖索引（事实表，不因 Level 2 就否定整包分析）。
-5. **04** — 每个 `game_id` **依次四轮**：`04a_*_facts` → `04b_*_form` → `04c_*_features` → `04d_*_conclusion`。04a–04c **禁止**写出最终信心分与投注式推荐；**禁止**省略任一场或任一轮。
-6. **05** `05_synthesis_parlay.md` — 串关或赛后复盘合成（腿须与入库赔率一致）。**仅当** scope 内每场 **04d** 已有结论后再做（会话无历史时可请用户粘贴各场摘要，但不得伪造未做场次）。
+5. **04** — 每个 `game_id` 依 `game_phase`：**赛前**：`04a_*_facts` → `04b_*_form` → `04c_*_features` → `04d_*_conclusion`。**赛后（已结束）**：`04a`（盲事实，无比分）→ `04b` → `04c` → `04d_*_analysis`（先验）→ `04e_*_truth`（真实赛果）→ `04f_*_review`（对照复盘）。04a–04c **禁止**写出最终信心分与投注式推荐；**禁止**省略任一场或任一轮。
+6. **05** `05_synthesis_parlay.md` — 串关或赛后复盘合成（腿须与入库赔率一致）。**仅当** scope 内每场 **赛前 04d** 或 **赛后 04f** 已完成后再做（会话无历史时可请用户粘贴各场摘要，但不得伪造未做场次）。
 7. **06** `06_output_template.md` — 最终排版（可与 05 合并）。
 
 **分析对象语义**：所有结论针对 **`beijing_game_date`（北京时间比赛日）**；`manifest.target_date` 仅为数据包生成时的赛程日，若与用户指定的 `beijing_game_date` 不同，**以用户指定的比赛日为准**重新框定「待分析场次」（在数据包场次范围内筛选该日的比赛，或明确说明数据包不包含该日则终止）。
@@ -101,7 +101,7 @@ metadata:
 ## 串关推荐策略（勿固守 2 串 1）
 
 - **问题**：仅输出 **2 串 1** 过于保守，与体彩前端支持的 **2～8 场**、多种 **过关方式（N 串 1、M 串 N 等）** 不一致；但若盲目加关数会违反规则或选到不可同票的组合。
-- **做法**：按 **`01_rules.md` / `05_synthesis_parlay.md`** 与数据包内各场 **04d** 的结论，在 **组合可行** 的前提下，给出 **多档串关**（赛前）或 **复盘**（赛后），而不是默认只写一档 2 串 1。
+- **做法**：按 **`01_rules.md` / `05_synthesis_parlay.md`** 与数据包内各场 **赛前 04d** 或 **赛后 04f** 的结论，在 **组合可行** 的前提下，给出 **多档串关**（赛前）或 **复盘**（赛后），而不是默认只写一档 2 串 1。
   - **场数**：在当日合格腿充足时，应至少考虑 **2 串 1、3 串 1、4 串 1** 等 **N 串 1**（`N` 随可用强信号场数上升，上限对标体彩 **8 关**；胜分差等有更严上限时以「木桶」为准，见下条）。
   - **过关方式**：除 **N 串 1** 外，若步骤 05 或用户场景需要 **复合过关**（如 3 串 3、4 串 11），须在 `label` 与 `combined_rationale_zh` 中写明 **体彩命名**（与仓库 `docs/体彩竞彩篮球真实玩法体系.md` 第七节、`nba-analysis-backend/betting/sporttery_combos.py` 一致）；复合过关时 **EV** 按步骤说明为子注平均近似即可。
   - **分档命名**：`parlays[].label` 仍用 **风险档 + 过关名**，例如 `保守·2串1`、`稳健·3串1`、`进取·4串1`、`复合·3串4`；**勿**整份输出只出现一种关数。
@@ -120,7 +120,7 @@ metadata:
 
 在运行目录下创建子目录 **`output/`**（与 `manifest.json` 同级）。
 
-**写盘前自检（须能在心中或回复中核对）**：`manifest.game_ids_scope` 内每个 `game_id` 是否都已完成对应 **`04d_game_<id>_conclusion`**（或兼容旧名 `04_game_<id>`）；**是** → 才可进入 05/06；**仅当** 全部步骤完成且与 scope 一致时，才把 `meta.json` 的 `status` 设为 `completed`，并把 `parlay_recommendation.json` 的 `analysis_complete` 设为 `true`。未完成则保持 `in_progress` 或 `failed`，**勿**提前同步终稿。
+**写盘前自检（须能在心中或回复中核对）**：`manifest.game_ids_scope` 内每个 `game_id` 是否都已完成对应 **`04d_game_<id>_conclusion`（赛前）或 `04f_game_<id>_review`（赛后）**（或兼容旧名 `04_game_<id>`）；**是** → 才可进入 05/06；**仅当** 全部步骤完成且与 scope 一致时，才把 `meta.json` 的 `status` 设为 `completed`，并把 `parlay_recommendation.json` 的 `analysis_complete` 设为 `true`。未完成则保持 `in_progress` 或 `failed`，**勿**提前同步终稿。
 
 ### `output/meta.json`
 
@@ -132,14 +132,14 @@ metadata:
   "data_bundle_date": "YYYY-MM-DD",
   "beijing_game_date": "YYYY-MM-DD",
   "completed_game_ids": [7341, 7342],
-  "finished_steps": ["00_README", "01_rules", "02_schedule", "03_odds_index", "04d_game_7341_conclusion", "04d_game_7342_conclusion", "05_synthesis", "06_output"],
+  "finished_steps": ["00_README", "01_rules", "02_schedule", "03_odds_index", "04d_game_7341_conclusion", "04f_game_7342_review", "05_synthesis", "06_output"],
   "updated_at_utc": "<ISO8601 Z>"
 }
 ```
 
 - `status`：`in_progress` | `completed` | `failed`。后端「同步产物」默认要求 `completed` 才入库。
 - **`completed_game_ids`**：与 `manifest.json` 的 `game_ids_scope` **排序后一致**（整数数组）。
-- **`finished_steps`**：须**逐项列出**每场完成标记，如 `04d_game_7341_conclusion`（或兼容 `04_game_7341`），勿仅用占位符。
+- **`finished_steps`**：须**逐项列出**每场完成标记，如赛前 `04d_game_7341_conclusion`、赛后 `04f_game_7342_review`（或兼容 `04_game_<id>`），勿仅用占位符。
 
 ### `output/parlay_recommendation.json`
 
